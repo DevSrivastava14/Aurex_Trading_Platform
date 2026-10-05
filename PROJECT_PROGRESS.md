@@ -29,8 +29,8 @@ Build a production-style paper trading platform with:
 | Day 2 | Authentication + JWT + Protected Routes | ✅ Completed |
 | Day 3 | Trading Dashboard UI | ✅ Completed |
 | Day 4 | Stocks + Market Data + Charts | ✅ Completed |
-| Day 5 | Buy/Sell Trading System | ⬜ Pending |
-| Day 6 | Portfolio + P&L + Trade History | ⬜ Pending |
+| Day 5 | Buy/Sell Trading System | ✅ Completed |
+| Day 6 | Portfolio + P&L + Trade History | ⬜ Not Started / Next |
 | Day 7 | Watchlist + Additional Features | ⬜ Pending |We are starting Day 4 of the AUREX MERN paper-trading platform.
 
 Day 1 and Day 2 authentication are complete.
@@ -76,11 +76,19 @@ Wait for my next instruction.
 
 ## Current Status
 
-**Day 4 / 10 — Stocks + Market Data + Charts Complete**
+**Day 5 / 10 — Buy/Sell Trading System Complete**
 
-**Next milestone:** Day 5 — Buy/Sell Trading System
+**Next milestone:** Day 6 — Portfolio + P&L + Trade History
 
-**NEXT:** Day 5 — Buy/Sell Trading System
+**NEXT:** Day 6 — Portfolio + P&L + Trade History
+
+## Current Project State
+
+- AUREX is a MERN paper-trading platform.
+- The market universe currently uses US stocks and USD ($).
+- Market prices are mock data; order execution prices are controlled by the backend catalog.
+- Day 5 trading functionality is complete and validated.
+- Day 6 is the next development stage.
 
 ---
 
@@ -214,3 +222,41 @@ These are planned areas, not routes that are all implemented today. Frontend rou
 - `npm run lint` — passed.
 - The build reports a non-blocking Recharts bundle-size warning; bundle optimization is deferred to a later polish/optimization stage.
 - Market prices and historical chart data are mock data; no real stock market API is connected.
+
+---
+
+# Day 5 — Buy/Sell Trading System
+
+**Status: ✅ Completed**
+
+## Completed
+
+- Created the `Portfolio` and `Trade` MongoDB/Mongoose models.
+- Added a protected `POST /api/orders` endpoint using the existing JWT authentication middleware.
+- Added a server-side mock market catalog for the eight tradable US stocks; execution prices are controlled by the backend.
+- Implemented BUY and SELL execution with cash-balance and position updates.
+- Implemented weighted average purchase-price calculation for additional BUY orders.
+- Added validation for insufficient cash, missing holdings, overselling, unsupported symbols/order types, and invalid quantities.
+- Used a MongoDB transaction to keep portfolio updates and trade creation consistent.
+- Connected the frontend OrderPanel to the backend order endpoint while retaining the selected market stock.
+- Added frontend JWT login, protected routing, and logout.
+- Added registration with automatic login using the existing authentication endpoints.
+- Standardized monetary values throughout AUREX on USD ($); market prices remain mock values with no exchange-rate conversion.
+
+## Validation
+
+- Frontend lint and production build passed.
+- End-to-end API tests passed for registration, login, BUY, additional BUY, partial SELL, invalid orders, auth protection, and portfolio/trade consistency.
+- End-to-end browser tests passed for registration, authenticated market access, BUY, SELL, oversell rejection, refresh persistence, logout, and protected-route redirects.
+- MongoDB transactions worked during end-to-end API validation.
+
+---
+
+# Day 6 — Portfolio + P&L + Trade History
+
+**Status: ⬜ Not Started / Next**
+
+## Next
+
+- Build portfolio, profit-and-loss, and trade-history features on the existing `Portfolio` and `Trade` models.
+- Reuse these models rather than creating duplicate portfolio or trade models.
