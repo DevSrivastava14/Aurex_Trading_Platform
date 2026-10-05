@@ -28,23 +28,59 @@ Build a production-style paper trading platform with:
 | Day 1 | MERN architecture + MongoDB Atlas | ✅ Completed |
 | Day 2 | Authentication + JWT + Protected Routes | ✅ Completed |
 | Day 3 | Trading Dashboard UI | ✅ Completed |
-| Day 4 | Stocks + Market Data + Charts | ⬜ Pending |
+| Day 4 | Stocks + Market Data + Charts | ✅ Completed |
 | Day 5 | Buy/Sell Trading System | ⬜ Pending |
 | Day 6 | Portfolio + P&L + Trade History | ⬜ Pending |
-| Day 7 | Watchlist + Additional Features | ⬜ Pending |
+| Day 7 | Watchlist + Additional Features | ⬜ Pending |We are starting Day 4 of the AUREX MERN paper-trading platform.
+
+Day 1 and Day 2 authentication are complete.
+Day 3 trading dashboard UI is complete.
+
+Day 4 goal:
+
+* stocks / market data
+* stock selection
+* stock details
+* interactive price charts
+
+IMPORTANT:
+Do not modify, create, delete, or refactor any files yet.
+
+First inspect the existing frontend structure and identify:
+
+1. The current React entry point
+2. Existing routing setup
+3. Dashboard.jsx
+4. Navbar.jsx
+5. Sidebar.jsx
+6. MarketWatch.jsx
+7. OrderPanel.jsx
+8. mockData.js
+9. Existing CSS files/styles
+10. Any existing dependencies in package.json
+
+Then give me:
+
+* the current relevant file structure
+* how routing currently works
+* where market-related mock data currently lives
+* which existing components we can reuse for Day 4
+* which new files/components you recommend creating
+
+Do not make any changes yet.
+Wait for my next instruction.
+
 | Day 8 | Backend Integration + Validation | ⬜ Pending |
 | Day 9 | UI/UX Polish + Error Handling | ⬜ Pending |
 | Day 10 | Testing + Deployment + Documentation | ⬜ Pending |
 
 ## Current Status
 
-**Day 3 / 10 — Trading Dashboard UI Complete ✅**
+**Day 4 / 10 — Stocks + Market Data + Charts Complete**
 
-**Next milestone:** Day 4 — Stocks + Market Data + Charts
+**Next milestone:** Day 5 — Buy/Sell Trading System
 
-**NEXT:** Day 4 — Market Data + Charts
-
-Day 4 will begin turning the static dashboard into a functional market interface with stock data, stock selection/details, and interactive charts.
+**NEXT:** Day 5 — Buy/Sell Trading System
 
 ---
 
@@ -146,3 +182,35 @@ Planned backend API areas include:
 - `/api/watchlist`
 
 These are planned areas, not routes that are all implemented today. Frontend routes and backend API areas will be introduced progressively during Days 4–8 as the related features are developed.
+
+---
+
+# Day 4 — Stocks + Market Data + Charts
+
+**Status: ✅ Completed**
+
+## Completed
+
+- Added React Router support for `/dashboard` and `/market`, with `/` redirecting to `/dashboard`.
+- Added `/market` as a dedicated market page.
+- Added mock stock market data in `src/data/marketData.js`.
+- Added 8 stocks with symbol, company name, price, daily change, and percentage change.
+- Added stock selection with the first stock selected by default.
+- Added reusable `src/components/StockDetails.jsx`.
+- Added previous close, day high, day low, volume, and market status data.
+- Added Recharts as the charting library.
+- Added reusable `src/components/PriceChart.jsx`.
+- Added mock historical price data for the 1D, 1W, and 1M ranges.
+- Added interactive 1D, 1W, and 1M chart ranges.
+- Preserved the selected chart range when changing stocks.
+- Added responsive chart behavior.
+- Added stock search by symbol and company name.
+- Added a "No stocks found" state.
+- Kept search filtering independent from selected-stock state.
+- Added responsive Market page styling.
+- Verified desktop and mobile layouts.
+- Verified no horizontal overflow at tested mobile widths.
+- `npm run build` — passed.
+- `npm run lint` — passed.
+- The build reports a non-blocking Recharts bundle-size warning; bundle optimization is deferred to a later polish/optimization stage.
+- Market prices and historical chart data are mock data; no real stock market API is connected.

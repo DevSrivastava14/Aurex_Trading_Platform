@@ -1,6 +1,8 @@
+import { Link, NavLink } from "react-router-dom";
+
 const navigation = [
-    { label: "Dashboard", icon: "▦", active: true },
-    { label: "Market", icon: "⌁" },
+    { label: "Dashboard", icon: "▦", to: "/dashboard" },
+    { label: "Market", icon: "⌁", to: "/market" },
     { label: "Portfolio", icon: "◫" },
     { label: "Orders", icon: "⇄" },
     { label: "Watchlist", icon: "☆" },
@@ -10,23 +12,29 @@ const navigation = [
 function Sidebar() {
     return (
         <aside className="sidebar">
-            <a className="brand" href="#" aria-label="Aurex home">
+            <Link className="brand" to="/dashboard" aria-label="Aurex home">
                 <span className="brand-mark">A</span>
                 <span className="brand-name">aurex<span>.</span></span>
-            </a>
+            </Link>
 
             <div className="sidebar-label">TRADING</div>
             <nav className="sidebar-nav" aria-label="Main navigation">
                 {navigation.map((item) => (
-                    <a
-                        className={`nav-item${item.active ? " active" : ""}`}
-                        href="#"
-                        key={item.label}
-                        aria-current={item.active ? "page" : undefined}
-                    >
-                        <span className="nav-icon" aria-hidden="true">{item.icon}</span>
-                        <span>{item.label}</span>
-                    </a>
+                    item.to ? (
+                        <NavLink
+                            className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
+                            to={item.to}
+                            key={item.label}
+                        >
+                            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+                            <span>{item.label}</span>
+                        </NavLink>
+                    ) : (
+                        <span className="nav-item" aria-disabled="true" key={item.label}>
+                            <span className="nav-icon" aria-hidden="true">{item.icon}</span>
+                            <span>{item.label}</span>
+                        </span>
+                    )
                 ))}
             </nav>
 
