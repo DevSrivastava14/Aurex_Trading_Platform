@@ -2,7 +2,7 @@ function StockDetails({ stock }) {
     const positive = stock.change >= 0;
     const performanceClass = positive ? "positive-text" : "negative-text";
     const formatPrice = (value) => `$${value.toFixed(2)}`;
-    const formatChange = (value) => `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+    const formatChange = (value) => `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`;
     const formatPercent = (value) => `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
     const metrics = [
         { label: "Previous close", value: formatPrice(stock.previousClose) },

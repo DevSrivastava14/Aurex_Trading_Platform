@@ -1,12 +1,13 @@
 import { useState } from "react";
 import Navbar from "../components/Navbar.jsx";
+import OrderPanel from "../components/OrderPanel.jsx";
 import PriceChart from "../components/PriceChart.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import StockDetails from "../components/StockDetails.jsx";
 import { stocks } from "../data/marketData.js";
 
 const formatPrice = (value) => `$${value.toFixed(2)}`;
-const formatChange = (value) => `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+const formatChange = (value) => `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`;
 const formatChangePercent = (value) => `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
 
 function Market() {
@@ -92,6 +93,7 @@ function Market() {
                         <div className="market-selected-column">
                             <StockDetails stock={selectedStock} />
                             <PriceChart stock={selectedStock} />
+                            <OrderPanel selectedStock={selectedStock} />
                         </div>
                     </div>
                 </div>

@@ -1,15 +1,20 @@
 import { useState } from "react";
-import { marketWatch } from "../data/mockData.js";
+import { stocks } from "../data/marketData.js";
+import api from "../services/api.js";
 
-function OrderPanel() {
+const formatCurrency = (value) => `$${Number(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+})}`;
+
+function OrderPanel({ selectedStock = stocks[0] }) {
     const [side, setSide] = useState("buy");
-    const [symbol, setSymbol] = useState(marketWatch[0].symbol);
     const [quantity, setQuantity] = useState("1");
-    const [orderType, setOrderType] = useState("Market");
-    const [limitPrice, setLimitPrice] = useState(String(marketWatch[0].priceValue));
-    const selectedStock = marketWatch.find((stock) => stock.symbol === symbol);
-    const price = orderType === "Market" ? selectedStock.priceValue : Number(limitPrice) || 0;
-    const estimatedAmount = (Number(quantity) || 0) * price;
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+    const estimatedAmount = (Number(quantity) || 0) * selectedStock.price;
+
     const adjustQuantity = (amount) => {
         const currentQuantity = Number(quantity);
         if (!Number.isFinite(currentQuantity) || currentQuantity < 1) {
@@ -19,76 +24,105 @@ function OrderPanel() {
 
         setQuantity(String(Math.max(1, currentQuantity + amount)));
     };
-    const formattedEstimate = `₹${estimatedAmount.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
+
+    const handleSubmit = async () => {
+        setErrorMessage("");
+        setSuccessMessage("");
+
+        const orderQuantity = Number(quantity);
+        if (!Number.isInteger(orderQuantity) || orderQuantity <= 0) {
+            setErrorMessage("Enter a positive whole-number quantity.");
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const response = await api.post("/api/orders", {
+                symbol: selectedStock.symbol,
+                side: side.toUpperCase(),
+                quantity: orderQuantity,
+                orderType: "MARKET",
+            });
+            const trade = response.data?.trade;
+
+            if (!trade) {
+                throw new Error("The server response did not include the completed trade.");
+            }
+
+            setSuccessMessage(
+                `${trade.side} ${trade.quantity} ${trade.symbol} at ${formatCurrency(trade.price)} per share. Total: ${formatCurrency(trade.totalValue)}.`
+            );
+            setQuantity("1");
+        } catch (error) {
+            setErrorMessage(
+                error.response?.data?.message
+                    || error.message
+                    || "Unable to place the order. Check your connection and try again."
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <section className="panel order-panel">
             <div className="panel-header">
                 <div>
                     <h2>Order Panel</h2>
-                    <p className="panel-subtitle">Configure a mock order</p>
+                    <p className="panel-subtitle">Configure a market order</p>
                 </div>
-                <span className="table-caption">PREVIEW ONLY</span>
+                <span className="table-caption">MARKET ORDER</span>
             </div>
             <div className="order-symbol">
                 <div className="order-field">
-                    <label className="field-label" htmlFor="order-stock">Stock</label>
-                    <select
-                        id="order-stock"
-                        value={symbol}
-                        onChange={(event) => {
-                            const stock = marketWatch.find((item) => item.symbol === event.target.value);
-                            setSymbol(event.target.value);
-                            setLimitPrice(String(stock.priceValue));
-                        }}
-                    >
-                        {marketWatch.map((stock) => <option key={stock.symbol} value={stock.symbol}>{stock.symbol}</option>)}
-                    </select>
+                    <span className="field-label">Selected stock</span>
+                    <strong>{selectedStock.symbol}</strong>
+                    <span>{selectedStock.companyName}</span>
                 </div>
-                <span className="order-price">{selectedStock.price}</span>
+                <div className="order-field">
+                    <span className="field-label">Current price</span>
+                    <span className="order-price">{formatCurrency(selectedStock.price)}</span>
+                </div>
             </div>
             <div className="order-side" aria-label="Order side">
-                <button className={`side-option${side === "buy" ? " selected" : ""}`} type="button" aria-pressed={side === "buy"} onClick={() => setSide("buy")}>Buy</button>
-                <button className={`side-option${side === "sell" ? " selected" : ""}`} type="button" aria-pressed={side === "sell"} onClick={() => setSide("sell")}>Sell</button>
+                <button className={`side-option${side === "buy" ? " selected" : ""}`} type="button" aria-pressed={side === "buy"} onClick={() => { setSide("buy"); setErrorMessage(""); setSuccessMessage(""); }}>Buy</button>
+                <button className={`side-option${side === "sell" ? " selected" : ""}`} type="button" aria-pressed={side === "sell"} onClick={() => { setSide("sell"); setErrorMessage(""); setSuccessMessage(""); }}>Sell</button>
             </div>
             <div className="order-fields">
                 <div className="order-field">
                     <label className="field-label" htmlFor="order-quantity">Quantity</label>
                     <div className="quantity-field">
-                        <input id="order-quantity" type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+                        <input id="order-quantity" type="number" min="1" step="1" value={quantity} onChange={(event) => { setQuantity(event.target.value); setErrorMessage(""); setSuccessMessage(""); }} />
                         <span>Shares</span>
                         <div className="quantity-controls" aria-label="Adjust quantity">
-                            <button type="button" aria-label="Increase quantity" onClick={() => adjustQuantity(1)}>+</button>
-                            <button type="button" aria-label="Decrease quantity" onClick={() => adjustQuantity(-1)}>-</button>
+                            <button type="button" aria-label="Increase quantity" onClick={() => { adjustQuantity(1); setErrorMessage(""); setSuccessMessage(""); }}>+</button>
+                            <button type="button" aria-label="Decrease quantity" onClick={() => { adjustQuantity(-1); setErrorMessage(""); setSuccessMessage(""); }}>-</button>
                         </div>
                     </div>
                 </div>
                 <div className="order-field">
                     <label className="field-label" htmlFor="order-type">Order type</label>
-                    <select id="order-type" value={orderType} onChange={(event) => setOrderType(event.target.value)}><option>Market</option><option>Limit</option></select>
+                    <input className="order-input" id="order-type" value="Market" readOnly />
                 </div>
                 <div className="order-field">
                     <label className="field-label" htmlFor="order-price">Price</label>
                     <input
                         className="order-input"
                         id="order-price"
-                        type="number"
-                        min="0"
-                        step="0.05"
-                        value={orderType === "Market" ? selectedStock.priceValue : limitPrice}
-                        readOnly={orderType === "Market"}
-                        onChange={(event) => setLimitPrice(event.target.value)}
+                        value={selectedStock.price}
+                        readOnly
                     />
                 </div>
             </div>
             <div className="order-summary">
-                <span>Estimated amount</span><strong>{formattedEstimate}</strong>
+                <span>Estimated amount</span><strong>{formatCurrency(estimatedAmount)}</strong>
             </div>
-            <button className="trade-button" type="button">Place mock order</button>
-            <p className="order-disclaimer">UI preview only · No order will be submitted</p>
+            {errorMessage && <p className="order-disclaimer" role="alert">{errorMessage}</p>}
+            {successMessage && <p className="order-disclaimer" role="status">{successMessage}</p>}
+            <button className="trade-button" type="button" onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? "Submitting order..." : `Place ${side.toUpperCase()} order`}
+            </button>
         </section>
     );
 }

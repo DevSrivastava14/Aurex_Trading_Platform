@@ -14,7 +14,7 @@ function Dashboard() {
                 <div className="dashboard-content">
                     <section className="welcome-row">
                         <div>
-                            <p className="eyebrow">PAPER TRADING · NSE</p>
+                            <p className="eyebrow">PAPER TRADING · US MARKETS</p>
                             <h1>Dashboard</h1>
                             <p className="welcome-subtitle">Your portfolio and the market, at a glance.</p>
                         </div>
