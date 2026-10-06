@@ -3,7 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/Dashboard.jsx";
 import Login from "./pages/Login.jsx";
 import Market from "./pages/Market.jsx";
+import Portfolio from "./pages/Portfolio.jsx";
 import Register from "./pages/Register.jsx";
+import TradeHistory from "./pages/TradeHistory.jsx";
 import { AUTH_STATE_CHANGE_EVENT, getAuthToken } from "./services/auth.js";
 
 function ProtectedRoute({ children, isAuthenticated }) {
@@ -47,6 +49,8 @@ function App() {
                 <Route path="/register" element={<RegisterRoute isAuthenticated={isAuthenticated} />} />
                 <Route path="/dashboard" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} />
                 <Route path="/market" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Market /></ProtectedRoute>} />
+                <Route path="/portfolio" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Portfolio /></ProtectedRoute>} />
+                <Route path="/trades" element={<ProtectedRoute isAuthenticated={isAuthenticated}><TradeHistory /></ProtectedRoute>} />
             </Routes>
         </BrowserRouter>
     );

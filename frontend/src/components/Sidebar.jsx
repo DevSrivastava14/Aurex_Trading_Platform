@@ -3,7 +3,8 @@ import { Link, NavLink } from "react-router-dom";
 const navigation = [
     { label: "Dashboard", icon: "▦", to: "/dashboard" },
     { label: "Market", icon: "⌁", to: "/market" },
-    { label: "Portfolio", icon: "◫" },
+    { label: "Portfolio", icon: "◫", to: "/portfolio" },
+    { label: "Trade History", icon: "↺", to: "/trades" },
     { label: "Orders", icon: "⇄" },
     { label: "Watchlist", icon: "☆" },
     { label: "Settings", icon: "⚙" },
