@@ -31,7 +31,7 @@ Build a production-style paper trading platform with:
 | Day 4 | Stocks + Market Data + Charts | ✅ Completed |
 | Day 5 | Buy/Sell Trading System | ✅ Completed |
 | Day 6 | Portfolio + P&L + Trade History | ✅ Completed |
-| Day 7 | Watchlist + Additional Features | ⬜ Pending |
+| Day 7 | Watchlist + Additional Features | ✅ Completed |
 
 Day 1 and Day 2 authentication are complete.
 Day 3 trading dashboard UI is complete.
@@ -42,9 +42,9 @@ Day 3 trading dashboard UI is complete.
 
 ## Current Status
 
-**Day 6 / 10 — Portfolio + P&L + Trade History Complete**
+**Day 7 / 10 — Watchlist + Additional Features Complete**
 
-**Next milestone:** Day 7 — Watchlist + Additional Features
+**Next milestone:** Day 8 — Backend Integration + Validation
 
 ## Current Project State
 
@@ -53,7 +53,9 @@ Day 3 trading dashboard UI is complete.
 - Market prices are mock data; order execution prices are controlled by the backend catalog.
 - Day 5 trading functionality is complete and validated.
 - Day 6 portfolio, P&L, and trade history functionality is complete and validated.
-- Day 7 is the next development stage.
+- Day 7 persistent watchlist functionality is complete and validated.
+- Market prices still use the existing mock market catalog; live market-data API integration is planned for Day 8.
+- Day 8 is the next development stage.
 
 ---
 
@@ -271,12 +273,46 @@ These are planned areas, not routes that are all implemented today. Frontend rou
 
 # Day 7 — Watchlist + Additional Features
 
-**Status: ⬜ Pending**
+**Status: ✅ Completed**
 
-## Planned
+## Backend
 
-- Build persistent watchlist functionality.
-- Add watchlist API endpoints.
-- Add watchlist frontend UI.
-- Integrate the watchlist with the Market page.
-- Add useful small trading-platform improvements.
+- Created the `Watchlist` MongoDB model with one user-scoped document per user and a normalized symbols array.
+- Added the protected `GET /api/watchlist` endpoint.
+- Added the protected `POST /api/watchlist` endpoint with symbol validation and duplicate prevention.
+- Added the protected `DELETE /api/watchlist/:symbol` endpoint.
+- Kept watchlist persistence scoped to the authenticated user.
+- Reused the existing backend market catalog for stock prices; no market data is stored in the Watchlist model.
+
+## Frontend — Watchlist
+
+- Created `frontend/src/pages/Watchlist.jsx`.
+- Connected the page to the Watchlist API using the existing authenticated Axios client.
+- Displayed watched symbols and current prices with loading, error, and empty states.
+- Added remove actions with immediate UI updates after successful removal.
+- Added a link to the Market page when the watchlist is empty.
+
+## Market Integration
+
+- Connected the Market stock details panel to add and remove the selected stock from the watchlist.
+- Displayed whether a stock is already in the watchlist and updated the UI immediately after successful changes.
+- Added request loading and error feedback without changing existing Market functionality.
+
+## Routing / Navigation
+
+- Added the protected `/watchlist` route.
+- Added Watchlist to the Sidebar navigation with the existing active-state pattern.
+- Preserved existing routes and navigation behavior.
+
+## Validation
+
+- Backend Watchlist API validation passed, including authentication protection, duplicate prevention, unsupported-symbol validation, persistence, and user isolation.
+- Frontend `npm run lint` passed.
+- Frontend `npm run build` passed; the existing non-blocking Vite large-chunk warning remains.
+- Manual end-to-end browser testing completed successfully.
+- Day 7 is fully completed.
+
+## Market Data
+
+- Watchlist prices continue to come from the existing mock market catalog.
+- Live market-data API integration is intentionally planned for Day 8.

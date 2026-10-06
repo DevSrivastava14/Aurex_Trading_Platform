@@ -1,4 +1,11 @@
-function StockDetails({ stock }) {
+function StockDetails({
+    stock,
+    isInWatchlist,
+    isWatchlistLoading,
+    isWatchlistUpdating,
+    watchlistError,
+    onWatchlistToggle,
+}) {
     const positive = stock.change >= 0;
     const performanceClass = positive ? "positive-text" : "negative-text";
     const formatPrice = (value) => `$${value.toFixed(2)}`;
@@ -46,6 +53,25 @@ function StockDetails({ stock }) {
                         <strong className="table-number">{metric.value}</strong>
                     </div>
                 ))}
+            </div>
+
+            <div>
+                {isInWatchlist && <p className="panel-subtitle" role="status">In Watchlist</p>}
+                <button
+                    className="trade-button"
+                    type="button"
+                    onClick={onWatchlistToggle}
+                    disabled={isWatchlistLoading || isWatchlistUpdating}
+                >
+                    {isWatchlistLoading
+                        ? "Checking Watchlist..."
+                        : isWatchlistUpdating
+                            ? (isInWatchlist ? "Removing..." : "Adding...")
+                            : isInWatchlist
+                                ? "Remove from Watchlist"
+                                : "Add to Watchlist"}
+                </button>
+                {watchlistError && <p className="login-error" role="alert">{watchlistError}</p>}
             </div>
         </section>
     );

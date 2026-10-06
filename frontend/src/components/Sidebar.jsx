@@ -6,7 +6,7 @@ const navigation = [
     { label: "Portfolio", icon: "◫", to: "/portfolio" },
     { label: "Trade History", icon: "↺", to: "/trades" },
     { label: "Orders", icon: "⇄" },
-    { label: "Watchlist", icon: "☆" },
+    { label: "Watchlist", icon: "☆", to: "/watchlist" },
     { label: "Settings", icon: "⚙" },
 ];
 

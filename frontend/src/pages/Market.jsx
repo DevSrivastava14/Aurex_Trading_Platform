@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar.jsx";
 import OrderPanel from "../components/OrderPanel.jsx";
 import PriceChart from "../components/PriceChart.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import StockDetails from "../components/StockDetails.jsx";
 import { stocks } from "../data/marketData.js";
+import api from "../services/api.js";
 
 const formatPrice = (value) => `$${value.toFixed(2)}`;
 const formatChange = (value) => `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`;
@@ -13,12 +14,65 @@ const formatChangePercent = (value) => `${value > 0 ? "+" : ""}${value.toFixed(2
 function Market() {
     const [selectedSymbol, setSelectedSymbol] = useState(stocks[0].symbol);
     const [searchTerm, setSearchTerm] = useState("");
+    const [watchlistSymbols, setWatchlistSymbols] = useState([]);
+    const [isWatchlistLoading, setIsWatchlistLoading] = useState(true);
+    const [isWatchlistUpdating, setIsWatchlistUpdating] = useState(false);
+    const [watchlistError, setWatchlistError] = useState("");
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
     const filteredStocks = stocks.filter((stock) =>
         stock.symbol.toLowerCase().includes(normalizedSearchTerm)
         || stock.companyName.toLowerCase().includes(normalizedSearchTerm)
     );
     const selectedStock = stocks.find((stock) => stock.symbol === selectedSymbol);
+
+    useEffect(() => {
+        const fetchWatchlist = async () => {
+            try {
+                const response = await api.get("/api/watchlist");
+                if (!Array.isArray(response.data?.symbols)) {
+                    throw new Error("The watchlist response was not in the expected format.");
+                }
+                setWatchlistSymbols(response.data.symbols);
+            } catch (error) {
+                setWatchlistError(
+                    error.response?.data?.message
+                        || "Unable to load watchlist status. You can still try adding this stock."
+                );
+            } finally {
+                setIsWatchlistLoading(false);
+            }
+        };
+
+        fetchWatchlist();
+    }, []);
+
+    const handleWatchlistToggle = async () => {
+        if (!selectedStock || isWatchlistUpdating) {
+            return;
+        }
+
+        const isInWatchlist = watchlistSymbols.includes(selectedStock.symbol);
+        setIsWatchlistUpdating(true);
+        setWatchlistError("");
+
+        try {
+            const response = isInWatchlist
+                ? await api.delete(`/api/watchlist/${encodeURIComponent(selectedStock.symbol)}`)
+                : await api.post("/api/watchlist", { symbol: selectedStock.symbol });
+
+            if (!Array.isArray(response.data?.symbols)) {
+                throw new Error("The watchlist response was not in the expected format.");
+            }
+            setWatchlistSymbols(response.data.symbols);
+        } catch (error) {
+            setWatchlistError(
+                error.response?.data?.message
+                    || `Unable to ${isInWatchlist ? "remove" : "add"} ${selectedStock.symbol} ${isInWatchlist ? "from" : "to"} your watchlist. Please try again.`
+            );
+        } finally {
+            setIsWatchlistUpdating(false);
+        }
+    };
 
     return (
         <div className="app-shell">
@@ -91,7 +145,14 @@ function Market() {
                         </section>
 
                         <div className="market-selected-column">
-                            <StockDetails stock={selectedStock} />
+                            <StockDetails
+                                stock={selectedStock}
+                                isInWatchlist={watchlistSymbols.includes(selectedSymbol)}
+                                isWatchlistLoading={isWatchlistLoading}
+                                isWatchlistUpdating={isWatchlistUpdating}
+                                watchlistError={watchlistError}
+                                onWatchlistToggle={handleWatchlistToggle}
+                            />
                             <PriceChart stock={selectedStock} />
                             <OrderPanel selectedStock={selectedStock} />
                         </div>
