@@ -4,6 +4,8 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const portfolioRoutes = require("./routes/portfolioRoutes");
+const tradeRoutes = require("./routes/tradeRoutes");
 
 dotenv.config();
 
@@ -15,6 +17,8 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/portfolio", portfolioRoutes);
+app.use("/api/trades", tradeRoutes);
 
 app.get("/", (req, res) => {
     res.json({

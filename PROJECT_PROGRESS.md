@@ -30,45 +30,11 @@ Build a production-style paper trading platform with:
 | Day 3 | Trading Dashboard UI | ✅ Completed |
 | Day 4 | Stocks + Market Data + Charts | ✅ Completed |
 | Day 5 | Buy/Sell Trading System | ✅ Completed |
-| Day 6 | Portfolio + P&L + Trade History | ⬜ Not Started / Next |
-| Day 7 | Watchlist + Additional Features | ⬜ Pending |We are starting Day 4 of the AUREX MERN paper-trading platform.
+| Day 6 | Portfolio + P&L + Trade History | ✅ Completed |
+| Day 7 | Watchlist + Additional Features | ⬜ Pending |
 
 Day 1 and Day 2 authentication are complete.
 Day 3 trading dashboard UI is complete.
-
-Day 4 goal:
-
-* stocks / market data
-* stock selection
-* stock details
-* interactive price charts
-
-IMPORTANT:
-Do not modify, create, delete, or refactor any files yet.
-
-First inspect the existing frontend structure and identify:
-
-1. The current React entry point
-2. Existing routing setup
-3. Dashboard.jsx
-4. Navbar.jsx
-5. Sidebar.jsx
-6. MarketWatch.jsx
-7. OrderPanel.jsx
-8. mockData.js
-9. Existing CSS files/styles
-10. Any existing dependencies in package.json
-
-Then give me:
-
-* the current relevant file structure
-* how routing currently works
-* where market-related mock data currently lives
-* which existing components we can reuse for Day 4
-* which new files/components you recommend creating
-
-Do not make any changes yet.
-Wait for my next instruction.
 
 | Day 8 | Backend Integration + Validation | ⬜ Pending |
 | Day 9 | UI/UX Polish + Error Handling | ⬜ Pending |
@@ -76,11 +42,9 @@ Wait for my next instruction.
 
 ## Current Status
 
-**Day 5 / 10 — Buy/Sell Trading System Complete**
+**Day 6 / 10 — Portfolio + P&L + Trade History Complete**
 
-**Next milestone:** Day 6 — Portfolio + P&L + Trade History
-
-**NEXT:** Day 6 — Portfolio + P&L + Trade History
+**Next milestone:** Day 7 — Watchlist + Additional Features
 
 ## Current Project State
 
@@ -88,7 +52,8 @@ Wait for my next instruction.
 - The market universe currently uses US stocks and USD ($).
 - Market prices are mock data; order execution prices are controlled by the backend catalog.
 - Day 5 trading functionality is complete and validated.
-- Day 6 is the next development stage.
+- Day 6 portfolio, P&L, and trade history functionality is complete and validated.
+- Day 7 is the next development stage.
 
 ---
 
@@ -254,9 +219,64 @@ These are planned areas, not routes that are all implemented today. Frontend rou
 
 # Day 6 — Portfolio + P&L + Trade History
 
-**Status: ⬜ Not Started / Next**
+**Status: ✅ Completed**
 
-## Next
+## Backend
 
-- Build portfolio, profit-and-loss, and trade-history features on the existing `Portfolio` and `Trade` models.
-- Reuse these models rather than creating duplicate portfolio or trade models.
+- Added the Portfolio API using the existing `Portfolio` model.
+- Calculated portfolio valuation using current backend market prices.
+- Added unrealized P&L calculations.
+- Added the protected Trade History API using the existing `Trade` model.
+- Protected Portfolio and Trade History endpoints with JWT authentication.
+- Validated the APIs in Postman.
+
+## Frontend — Portfolio
+
+- Created `frontend/src/pages/Portfolio.jsx`.
+- Connected the page to `GET /api/portfolio`.
+- Added Cash Balance, Invested Value, and Current Value summaries.
+- Added Unrealized P&L and percentage.
+- Displayed real holdings data with loading, error, and empty states.
+- Added a responsive holdings layout.
+- Added a Recent Trades section showing the latest five trades and a View All link to `/trades`.
+
+## Frontend — Trade History
+
+- Created `frontend/src/pages/TradeHistory.jsx`.
+- Connected the page to `GET /api/trades` using the existing Axios client and JWT authentication.
+- Displayed Date, Symbol, Side, Quantity, Price, and Total Value.
+- Formatted dates and monetary values.
+- Applied positive and negative styling to BUY and SELL.
+- Added loading, error, and empty states.
+- Added a responsive trade-history table.
+
+## Routing / Navigation
+
+- Added protected `/portfolio` and `/trades` routes.
+- Added Portfolio and Trade History navigation to the Sidebar.
+- Preserved existing routes.
+
+## Validation
+
+- `npm run build` passed throughout Day 6.
+- The existing Vite large-chunk warning remained non-blocking.
+- Portfolio and Trade History APIs were validated in Postman.
+- Portfolio and Trade History pages were manually verified.
+- Existing AAPL test trades displayed correctly: BUY 10 AAPL, BUY 5 AAPL, and SELL 4 AAPL.
+- Verified the Portfolio → Recent Trades → View All → Trade History flow.
+- Verified protected routes and refresh persistence.
+- Day 6 is fully completed.
+
+---
+
+# Day 7 — Watchlist + Additional Features
+
+**Status: ⬜ Pending**
+
+## Planned
+
+- Build persistent watchlist functionality.
+- Add watchlist API endpoints.
+- Add watchlist frontend UI.
+- Integrate the watchlist with the Market page.
+- Add useful small trading-platform improvements.
