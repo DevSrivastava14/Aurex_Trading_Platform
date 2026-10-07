@@ -36,26 +36,28 @@ Build a production-style paper trading platform with:
 Day 1 and Day 2 authentication are complete.
 Day 3 trading dashboard UI is complete.
 
-| Day 8 | Backend Integration + Validation | ⬜ Pending |
-| Day 9 | UI/UX Polish + Error Handling | ⬜ Pending |
-| Day 10 | Testing + Deployment + Documentation | ⬜ Pending |
+| Day 8 | Backend Integration + Validation | ✅ COMPLETE |
+| Day 9 | UI/UX Polish + Error Handling | ⬜ NEXT |
+| Day 10 | Testing + Deployment + Documentation | ⬜ PENDING |
 
 ## Current Status
 
-**Day 7 / 10 — Watchlist + Additional Features Complete**
+**Day 8 / 10 — Backend Integration + Validation Complete**
 
-**Next milestone:** Day 8 — Backend Integration + Validation
+**Next milestone:** Day 9 — UI/UX Polish + Error Handling
 
 ## Current Project State
 
 - AUREX is a MERN paper-trading platform.
 - The market universe currently uses US stocks and USD ($).
-- Market prices are mock data; order execution prices are controlled by the backend catalog.
+- The Market page and PriceChart use live quotes and historical prices through backend Twelve Data APIs.
+- Paper-trading execution, portfolio valuation, and watchlist pricing continue to use the backend execution catalog.
 - Day 5 trading functionality is complete and validated.
 - Day 6 portfolio, P&L, and trade history functionality is complete and validated.
 - Day 7 persistent watchlist functionality is complete and validated.
-- Market prices still use the existing mock market catalog; live market-data API integration is planned for Day 8.
-- Day 8 is the next development stage.
+- Day 8 backend market-data integration and trading-system compatibility validation are complete.
+- Static/mock dashboard widgets and the Dashboard's default OrderPanel stock remain unchanged.
+- Day 9 is the next development stage.
 
 ---
 
@@ -316,3 +318,93 @@ These are planned areas, not routes that are all implemented today. Frontend rou
 
 - Watchlist prices continue to come from the existing mock market catalog.
 - Live market-data API integration is intentionally planned for Day 8.
+
+---
+
+# Day 8 — Backend Integration + Validation
+
+**Status: ✅ Complete**
+
+## Step 1 — Twelve Data Service
+
+- Added `backend/src/services/twelveDataService.js` with backend-side current quote and historical price fetching.
+- Added historical series support for `1D`, `1W`, and `1M`.
+- Added clear handling for missing or invalid API keys, request timeouts, malformed responses, provider errors, and rate limits.
+- Added `TWELVE_DATA_API_KEY=` to `backend/.env.example`; the key remains backend-only.
+- Added service tests using Node's built-in test runner.
+- Used Node's native `fetch`; no additional API client dependency was required.
+
+## Step 2 — Backend Live Market Endpoint
+
+- Added a backend market catalog for the supported symbols: AAPL, MSFT, GOOGL, AMZN, TSLA, NVDA, META, and NFLX.
+- Added public `GET /api/market`, which fetches current quotes through Twelve Data.
+- Kept the API key on the backend; it is never included in frontend responses.
+- Provider errors, including HTTP 429 rate limits, are surfaced instead of being replaced with mock data.
+- Added route tests for the market response and provider errors.
+
+## Step 3 — Frontend Market Integration
+
+- Updated `frontend/src/pages/Market.jsx` to fetch quotes from `GET /api/market` through the existing Axios client.
+- Removed the Market page's dependency on frontend mock quotes.
+- Added market loading, error, and retry states; the page does not fall back to mock market data.
+- Updated `StockDetails.jsx` to display the backend quote response.
+- Updated `PriceChart.jsx` to stop using generated mock chart data while real historical integration was pending.
+- Preserved `OrderPanel.jsx` and its Dashboard behavior; the Dashboard's default stock dependency remains unchanged.
+
+## Step 4 — Real Historical Charts
+
+- Added `GET /api/market/:symbol/history?range=1D`.
+- Supports exactly `1D`, `1W`, and `1M`, and validates symbols against the backend market catalog.
+- Returns `{ symbol, range, data: [{ timestamp, price }] }`.
+- Updated `PriceChart.jsx` to fetch historical prices when the selected stock or range changes.
+- Added chart loading, error, and retry states. No fake or random fallback chart data is used.
+- Live AAPL history returned HTTP 200 with 78 points for `1D`.
+- Browser validation confirmed the 1D/1W/1M controls and stock switching load chart data.
+
+## Step 5 — Trading-System Compatibility Validation
+
+- Confirmed live market quotes and historical data remain separate from paper-trading execution.
+- BUY/SELL execution continues to use backend-controlled execution-catalog prices.
+- Client-supplied execution prices remain rejected.
+- Portfolio valuation and watchlist pricing remain compatible with the backend execution catalog.
+- Trade history remains compatible.
+- Existing JWT-protected order, portfolio, trade-history, and watchlist routes remain unchanged.
+- Added `backend/test/tradingConsistency.test.js` for database-free compatibility checks.
+- Confirmed symbols in the live-market catalog match those in the execution catalog.
+
+## Architecture
+
+AUREX intentionally maintains two market-data paths:
+
+**Live market display**
+
+Twelve Data → Backend market APIs → Frontend Market page / PriceChart
+
+**Paper-trading execution**
+
+Backend execution catalog → Orders / Portfolio / Watchlist
+
+The execution catalog remains a paper-trading price source; it is not a live trading-price system.
+
+## Remaining Mock Data
+
+- The backend execution/portfolio/watchlist price catalog remains in use for existing paper-trading behavior.
+- Dashboard static widgets continue to use their existing sample data.
+- The Dashboard's default OrderPanel stock continues to use the frontend market catalog.
+- These areas were intentionally left unchanged during Day 8.
+
+## Validation
+
+- Backend tests: **19 passed, 0 failed**.
+- Frontend lint passed.
+- Frontend production build passed; the existing large-bundle warning remains non-blocking.
+- `git diff --check` passed.
+- Live `GET /api/market` successfully returned all 8 supported symbols during final validation.
+- Live historical AAPL data returned successfully.
+- Browser chart validation passed for range switching and stock switching.
+- Simulated provider HTTP 429 displayed a retryable error without falling back to fake data.
+- Existing trading-system compatibility checks passed.
+
+## Day 8 Summary
+
+Day 8 added a backend-owned Twelve Data integration for live market quotes and historical charts, connected the Market page and PriceChart to those APIs, and validated provider failure handling and trading-system compatibility. Live market display now uses Twelve Data through the backend, while paper-trading execution, portfolio valuation, and watchlist pricing intentionally continue to use the backend execution catalog.

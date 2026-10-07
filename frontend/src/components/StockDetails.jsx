@@ -6,16 +6,20 @@ function StockDetails({
     watchlistError,
     onWatchlistToggle,
 }) {
-    const positive = stock.change >= 0;
+    const positive = Number.isFinite(stock.change) && stock.change >= 0;
     const performanceClass = positive ? "positive-text" : "negative-text";
-    const formatPrice = (value) => `$${value.toFixed(2)}`;
-    const formatChange = (value) => `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`;
-    const formatPercent = (value) => `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
+    const formatPrice = (value) => Number.isFinite(value) ? `$${value.toFixed(2)}` : "—";
+    const formatChange = (value) => Number.isFinite(value)
+        ? `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`
+        : "—";
+    const formatPercent = (value) => Number.isFinite(value)
+        ? `${value > 0 ? "+" : ""}${value.toFixed(2)}%`
+        : "—";
     const metrics = [
         { label: "Previous close", value: formatPrice(stock.previousClose) },
         { label: "Day high", value: formatPrice(stock.dayHigh) },
         { label: "Day low", value: formatPrice(stock.dayLow) },
-        { label: "Volume", value: stock.volume.toLocaleString("en-US") },
+        { label: "Volume", value: Number.isFinite(stock.volume) ? stock.volume.toLocaleString("en-US") : "—" },
     ];
 
     return (
@@ -23,7 +27,9 @@ function StockDetails({
             <div className="panel-header">
                 <div>
                     <h2>Stock Details</h2>
-                    <p className="panel-subtitle">Current market snapshot</p>
+                    <p className="panel-subtitle">
+                        {stock.timestamp ? `Quote updated: ${stock.timestamp}` : "Current market snapshot"}
+                    </p>
                 </div>
                 <span className="table-caption">DETAILS</span>
             </div>
@@ -35,13 +41,13 @@ function StockDetails({
                 </div>
                 <span className="market-status-badge">
                     <span className="status-dot" />
-                    {stock.marketStatus}
+                    {stock.marketStatus || "Status unavailable"}
                 </span>
             </div>
 
             <div className="stock-details-price">
                 <strong className="table-number">{formatPrice(stock.price)}</strong>
-                <span className={`stock-performance ${performanceClass}`}>
+                <span className={`stock-performance${Number.isFinite(stock.change) ? ` ${performanceClass}` : ""}`}>
                     {formatChange(stock.change)} ({formatPercent(stock.changePercent)})
                 </span>
             </div>

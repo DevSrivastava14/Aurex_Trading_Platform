@@ -4,16 +4,41 @@ import OrderPanel from "../components/OrderPanel.jsx";
 import PriceChart from "../components/PriceChart.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import StockDetails from "../components/StockDetails.jsx";
-import { stocks } from "../data/marketData.js";
 import api from "../services/api.js";
 
-const formatPrice = (value) => `$${value.toFixed(2)}`;
-const formatChange = (value) => `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`;
-const formatChangePercent = (value) => `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
+const supportedSymbols = new Set(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]);
+const formatPrice = (value) => Number.isFinite(value) ? `$${value.toFixed(2)}` : "—";
+const formatChange = (value) => Number.isFinite(value)
+    ? `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`
+    : "—";
+const formatChangePercent = (value) => Number.isFinite(value)
+    ? `${value > 0 ? "+" : ""}${value.toFixed(2)}%`
+    : "—";
+
+const isValidMarketResponse = (stocks) => (
+    Array.isArray(stocks)
+    && stocks.length === supportedSymbols.size
+    && new Set(stocks.map((stock) => stock?.symbol)).size === supportedSymbols.size
+    && stocks.every((stock) => (
+        supportedSymbols.has(stock?.symbol)
+        && typeof stock.companyName === "string"
+        && stock.companyName.trim().length > 0
+        && Number.isFinite(stock.price)
+        && stock.price > 0
+        && (stock.change === null || Number.isFinite(stock.change))
+        && (stock.changePercent === null || Number.isFinite(stock.changePercent))
+        && (stock.timestamp === null || typeof stock.timestamp === "string")
+        && (stock.marketStatus === null || typeof stock.marketStatus === "string")
+    ))
+);
 
 function Market() {
-    const [selectedSymbol, setSelectedSymbol] = useState(stocks[0].symbol);
+    const [stocks, setStocks] = useState([]);
+    const [selectedSymbol, setSelectedSymbol] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [isMarketLoading, setIsMarketLoading] = useState(true);
+    const [marketError, setMarketError] = useState("");
+    const [marketLoadAttempt, setMarketLoadAttempt] = useState(0);
     const [watchlistSymbols, setWatchlistSymbols] = useState([]);
     const [isWatchlistLoading, setIsWatchlistLoading] = useState(true);
     const [isWatchlistUpdating, setIsWatchlistUpdating] = useState(false);
@@ -24,6 +49,52 @@ function Market() {
         || stock.companyName.toLowerCase().includes(normalizedSearchTerm)
     );
     const selectedStock = stocks.find((stock) => stock.symbol === selectedSymbol);
+
+    useEffect(() => {
+        let isCurrentRequest = true;
+
+        const fetchMarket = async () => {
+            setIsMarketLoading(true);
+            setMarketError("");
+
+            try {
+                const response = await api.get("/api/market");
+                const marketStocks = response.data?.stocks;
+
+                if (!isValidMarketResponse(marketStocks)) {
+                    throw new Error("The market data response was empty or malformed.");
+                }
+
+                if (isCurrentRequest) {
+                    setStocks(marketStocks);
+                    setSelectedSymbol((currentSymbol) => (
+                        marketStocks.some((stock) => stock.symbol === currentSymbol)
+                            ? currentSymbol
+                            : marketStocks[0].symbol
+                    ));
+                }
+            } catch (error) {
+                if (isCurrentRequest) {
+                    setStocks([]);
+                    setMarketError(
+                        error.response?.data?.message
+                            || (error.response
+                                ? "The market data service returned an error. Please try again."
+                                : "Unable to connect to the market data service. Check that the backend is running and try again.")
+                    );
+                }
+            } finally {
+                if (isCurrentRequest) {
+                    setIsMarketLoading(false);
+                }
+            }
+        };
+
+        fetchMarket();
+        return () => {
+            isCurrentRequest = false;
+        };
+    }, [marketLoadAttempt]);
 
     useEffect(() => {
         const fetchWatchlist = async () => {
@@ -88,6 +159,22 @@ function Market() {
                         </div>
                     </section>
 
+                    {isMarketLoading ? (
+                        <section className="panel" role="status">
+                            <p className="panel-subtitle">Loading market data...</p>
+                        </section>
+                    ) : marketError ? (
+                        <section className="panel" aria-label="Market data error">
+                            <p className="login-error" role="alert">{marketError}</p>
+                            <button
+                                className="trade-button"
+                                type="button"
+                                onClick={() => setMarketLoadAttempt((attempt) => attempt + 1)}
+                            >
+                                Retry
+                            </button>
+                        </section>
+                    ) : selectedStock && (
                     <div className="market-layout">
                         <section className="panel market-stocks-panel">
                             <div className="panel-header">
@@ -117,7 +204,13 @@ function Market() {
                                             <span>Change %</span>
                                         </div>
                                         {filteredStocks.map((stock) => {
-                                    const positive = stock.change >= 0;
+                                    const positive = Number.isFinite(stock.change) && stock.change >= 0;
+                                    const changeClass = Number.isFinite(stock.change)
+                                        ? (positive ? "positive-text" : "negative-text")
+                                        : "";
+                                    const changePercentClass = Number.isFinite(stock.changePercent)
+                                        ? (stock.changePercent >= 0 ? "positive-text" : "negative-text")
+                                        : "";
 
                                     return (
                                         <button
@@ -132,8 +225,8 @@ function Market() {
                                                 <span>{stock.companyName}</span>
                                             </span>
                                             <span className="stock-price table-number">{formatPrice(stock.price)}</span>
-                                            <span className={`stock-change stock-change-absolute table-number${positive ? " positive-text" : " negative-text"}`}>{formatChange(stock.change)}</span>
-                                            <span className={`stock-change stock-change-percent table-number${positive ? " positive-text" : " negative-text"}`}>{formatChangePercent(stock.changePercent)}</span>
+                                            <span className={`stock-change stock-change-absolute table-number ${changeClass}`}>{formatChange(stock.change)}</span>
+                                            <span className={`stock-change stock-change-percent table-number ${changePercentClass}`}>{formatChangePercent(stock.changePercent)}</span>
                                         </button>
                                     );
                                         })}
@@ -157,6 +250,7 @@ function Market() {
                             <OrderPanel selectedStock={selectedStock} />
                         </div>
                     </div>
+                    )}
                 </div>
             </main>
         </div>
