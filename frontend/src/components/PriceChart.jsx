@@ -11,6 +11,11 @@ import {
 import api from "../services/api.js";
 
 const ranges = ["1D", "1W", "1M"];
+const isCanceledRequest = (error) => (
+    error?.code === "ERR_CANCELED"
+    || error?.name === "CanceledError"
+    || error?.name === "AbortError"
+);
 const rangeDescriptions = {
     "1D": "Intraday price movement",
     "1W": "Price movement over the past week",
@@ -27,6 +32,7 @@ function PriceChart({ stock }) {
 
     useEffect(() => {
         let isCurrentRequest = true;
+        const controller = new AbortController();
 
         const fetchHistory = async () => {
             setIsLoading(true);
@@ -36,7 +42,7 @@ function PriceChart({ stock }) {
             try {
                 const response = await api.get(
                     `/api/market/${encodeURIComponent(stock.symbol)}/history`,
-                    { params: { range: selectedRange } }
+                    { params: { range: selectedRange }, signal: controller.signal }
                 );
                 const history = response.data;
                 if (
@@ -61,7 +67,7 @@ function PriceChart({ stock }) {
                     })));
                 }
             } catch (error) {
-                if (isCurrentRequest) {
+                if (isCurrentRequest && !isCanceledRequest(error)) {
                     setErrorMessage(
                         error.response?.status === 429
                             ? "Market data rate limit reached. Please wait before retrying."
@@ -78,9 +84,15 @@ function PriceChart({ stock }) {
             }
         };
 
-        fetchHistory();
+        Promise.resolve().then(() => {
+            if (isCurrentRequest) {
+                fetchHistory();
+            }
+        });
+
         return () => {
             isCurrentRequest = false;
+            controller.abort();
         };
     }, [stock.symbol, selectedRange, loadAttempt]);
 
@@ -107,12 +119,14 @@ function PriceChart({ stock }) {
             </div>
             <div className="price-chart">
                 {isLoading ? (
-                    <p className="stock-empty-state" role="status">Loading historical prices...</p>
+                    <div className="async-state async-state-loading" role="status">
+                        <p>Loading historical prices...</p>
+                    </div>
                 ) : errorMessage ? (
-                    <div>
-                        <p className="login-error" role="alert">{errorMessage}</p>
+                    <div className="async-state async-state-error" role="alert">
+                        <p>{errorMessage}</p>
                         <button
-                            className="trade-button"
+                            className="trade-button async-state-action"
                             type="button"
                             onClick={() => setLoadAttempt((attempt) => attempt + 1)}
                         >
@@ -160,9 +174,9 @@ function PriceChart({ stock }) {
                         </LineChart>
                     </ResponsiveContainer>
                 ) : (
-                    <p className="stock-empty-state" role="status">
-                        No historical prices are available for this range.
-                    </p>
+                    <div className="async-state async-state-empty" role="status">
+                        <p>No historical prices are available for this range.</p>
+                    </div>
                 )}
             </div>
         </section>

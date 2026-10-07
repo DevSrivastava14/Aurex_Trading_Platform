@@ -11,7 +11,7 @@ function Holdings() {
                 <span className="table-caption">4 POSITIONS</span>
             </div>
             <div className="table-scroll">
-                <table>
+                <table className="data-table">
                     <thead>
                         <tr>
                             <th>Symbol</th>

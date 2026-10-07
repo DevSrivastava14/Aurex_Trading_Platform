@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import api from "../services/api.js";
@@ -21,31 +22,59 @@ const formatDate = (value) => {
         });
 };
 
+const isCanceledRequest = (error) => (
+    error?.code === "ERR_CANCELED"
+    || error?.name === "CanceledError"
+    || error?.name === "AbortError"
+);
+
 function TradeHistory() {
     const [trades, setTrades] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState("");
+    const [loadAttempt, setLoadAttempt] = useState(0);
 
     useEffect(() => {
+        let isCurrentRequest = true;
+        const controller = new AbortController();
+
         const fetchTrades = async () => {
+            setIsLoading(true);
+            setErrorMessage("");
+
             try {
-                const response = await api.get("/api/trades");
+                const response = await api.get("/api/trades", { signal: controller.signal });
                 if (!Array.isArray(response.data)) {
                     throw new Error("The trade history response was not in the expected format.");
                 }
-                setTrades(response.data);
+                if (isCurrentRequest) {
+                    setTrades(response.data);
+                }
             } catch (error) {
-                setErrorMessage(
-                    error.response?.data?.message
-                        || "Unable to load trade history. Please try again."
-                );
+                if (isCurrentRequest && !isCanceledRequest(error)) {
+                    setErrorMessage(
+                        error.response?.data?.message
+                            || "Unable to load trade history. Please try again."
+                    );
+                }
             } finally {
-                setIsLoading(false);
+                if (isCurrentRequest) {
+                    setIsLoading(false);
+                }
             }
         };
 
-        fetchTrades();
-    }, []);
+        Promise.resolve().then(() => {
+            if (isCurrentRequest) {
+                fetchTrades();
+            }
+        });
+
+        return () => {
+            isCurrentRequest = false;
+            controller.abort();
+        };
+    }, [loadAttempt]);
 
     return (
         <div className="app-shell">
@@ -61,7 +90,7 @@ function TradeHistory() {
                             <p className="welcome-subtitle">Review your recent paper trades.</p>
                         </div>
                         <div className="market-pill">
-                            <span className="status-dot" /> Market open <span className="market-time">· Mock session</span>
+                            <span className="status-dot" /> Market open <span className="market-time">· US Session</span>
                         </div>
                     </section>
 
@@ -77,11 +106,25 @@ function TradeHistory() {
                         </div>
 
                         {isLoading ? (
-                            <p className="panel-subtitle" role="status">Loading trade history...</p>
+                            <div className="async-state async-state-loading" role="status">
+                                <p>Loading trade history...</p>
+                            </div>
                         ) : errorMessage ? (
-                            <p className="login-error" role="alert">{errorMessage}</p>
+                            <div className="async-state async-state-error" role="alert">
+                                <p>{errorMessage}</p>
+                                <button
+                                    className="trade-button async-state-action"
+                                    type="button"
+                                    onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+                                >
+                                    Retry
+                                </button>
+                            </div>
                         ) : trades.length === 0 ? (
-                            <p className="panel-subtitle">No trades yet. Your completed trades will appear here.</p>
+                            <div className="async-state async-state-empty">
+                                <p>No trades yet. Place a paper trade to see your activity here.</p>
+                                <Link className="trade-button async-state-action" to="/market">Explore Markets</Link>
+                            </div>
                         ) : (
                         <div className="table-scroll">
                             <table className="data-table">

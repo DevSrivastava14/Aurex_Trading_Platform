@@ -1,4 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
+import { getStoredUser } from "../services/auth.js";
 
 const navigation = [
     { label: "Dashboard", icon: "▦", to: "/dashboard" },
@@ -11,6 +12,16 @@ const navigation = [
 ];
 
 function Sidebar() {
+    const user = getStoredUser();
+    const userName = user?.name || "Account";
+    const userInitials = userName
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((namePart) => namePart[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "AU";
+
     return (
         <aside className="sidebar">
             <Link className="brand" to="/dashboard" aria-label="Aurex home">
@@ -42,8 +53,8 @@ function Sidebar() {
             <div className="sidebar-bottom">
                 <div className="market-status"><span className="status-dot" /> Market is open</div>
                 <div className="sidebar-profile">
-                    <div className="avatar avatar-small">AS</div>
-                    <div><strong>Alex Sharma</strong><span>Paper trader</span></div>
+                    <div className="avatar avatar-small">{userInitials}</div>
+                    <div><strong>{userName}</strong><span>Paper trader</span></div>
                     <span className="profile-more" aria-hidden="true">···</span>
                 </div>
             </div>

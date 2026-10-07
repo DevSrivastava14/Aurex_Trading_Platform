@@ -33,40 +33,72 @@ const formatDate = (value) => {
         });
 };
 
+const isCanceledRequest = (error) => (
+    error?.code === "ERR_CANCELED"
+    || error?.name === "CanceledError"
+    || error?.name === "AbortError"
+);
+
 function Portfolio() {
     const [portfolio, setPortfolio] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState("");
+    const [portfolioLoadAttempt, setPortfolioLoadAttempt] = useState(0);
     const [recentTrades, setRecentTrades] = useState([]);
     const [areTradesLoading, setAreTradesLoading] = useState(true);
     const [tradesErrorMessage, setTradesErrorMessage] = useState("");
+    const [tradesLoadAttempt, setTradesLoadAttempt] = useState(0);
 
     useEffect(() => {
-        const fetchPortfolio = async () => {
-            try {
-                setIsLoading(true);
-                setErrorMessage("");
+        let isCurrentRequest = true;
+        const controller = new AbortController();
 
-                const response = await api.get("/api/portfolio");
-                setPortfolio(response.data || null);
+        const fetchPortfolio = async () => {
+            setIsLoading(true);
+            setErrorMessage("");
+
+            try {
+                const response = await api.get("/api/portfolio", { signal: controller.signal });
+                if (isCurrentRequest) {
+                    setPortfolio(response.data || null);
+                }
             } catch (error) {
-                setErrorMessage(
-                    error.response?.data?.message
-                        || error.message
-                        || "Unable to load portfolio data."
-                );
+                if (isCurrentRequest && !isCanceledRequest(error)) {
+                    setErrorMessage(
+                        error.response?.data?.message
+                            || error.message
+                            || "Unable to load portfolio data."
+                    );
+                }
             } finally {
-                setIsLoading(false);
+                if (isCurrentRequest) {
+                    setIsLoading(false);
+                }
             }
         };
 
-        fetchPortfolio();
-    }, []);
+        Promise.resolve().then(() => {
+            if (isCurrentRequest) {
+                fetchPortfolio();
+            }
+        });
+
+        return () => {
+            isCurrentRequest = false;
+            controller.abort();
+        };
+    }, [portfolioLoadAttempt]);
 
     useEffect(() => {
+        let isCurrentRequest = true;
+        const controller = new AbortController();
+
         const fetchRecentTrades = async () => {
+            setAreTradesLoading(true);
+            setTradesErrorMessage("");
+
             try {
-                const response = await api.get("/api/trades");
+                const response = await api.get("/api/trades", { signal: controller.signal });
                 if (!Array.isArray(response.data)) {
                     throw new Error("The trade history response was not in the expected format.");
                 }
@@ -74,19 +106,34 @@ function Portfolio() {
                 const latestTrades = [...response.data]
                     .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt))
                     .slice(0, 5);
-                setRecentTrades(latestTrades);
+                if (isCurrentRequest) {
+                    setRecentTrades(latestTrades);
+                }
             } catch (error) {
-                setTradesErrorMessage(
-                    error.response?.data?.message
-                        || "Unable to load recent trades. Please try again."
-                );
+                if (isCurrentRequest && !isCanceledRequest(error)) {
+                    setTradesErrorMessage(
+                        error.response?.data?.message
+                            || "Unable to load recent trades. Please try again."
+                    );
+                }
             } finally {
-                setAreTradesLoading(false);
+                if (isCurrentRequest) {
+                    setAreTradesLoading(false);
+                }
             }
         };
 
-        fetchRecentTrades();
-    }, []);
+        Promise.resolve().then(() => {
+            if (isCurrentRequest) {
+                fetchRecentTrades();
+            }
+        });
+
+        return () => {
+            isCurrentRequest = false;
+            controller.abort();
+        };
+    }, [tradesLoadAttempt]);
 
     const summaryCards = [
         {
@@ -147,16 +194,27 @@ function Portfolio() {
                             <p className="welcome-subtitle">Track your paper-trading performance and holdings.</p>
                         </div>
                         <div className="market-pill">
-                            <span className="status-dot" /> Market open <span className="market-time">· Mock session</span>
+                            <span className="status-dot" /> Market open <span className="market-time">· US Session</span>
                         </div>
                     </section>
 
                     {isLoading && (
-                        <p className="panel-subtitle" role="status">Loading portfolio...</p>
+                        <div className="async-state async-state-loading" role="status">
+                            <p>Loading your portfolio...</p>
+                        </div>
                     )}
 
                     {!isLoading && errorMessage && (
-                        <p className="login-error" role="alert">{errorMessage}</p>
+                        <div className="async-state async-state-error" role="alert">
+                            <p>{errorMessage}</p>
+                            <button
+                                className="trade-button async-state-action"
+                                type="button"
+                                onClick={() => setPortfolioLoadAttempt((attempt) => attempt + 1)}
+                            >
+                                Retry
+                            </button>
+                        </div>
                     )}
 
                     {!isLoading && !errorMessage && (
@@ -185,11 +243,14 @@ function Portfolio() {
                                 </div>
 
                                 {holdings.length === 0 ? (
-                                    <p className="panel-subtitle">No holdings yet.</p>
+                                    <div className="async-state async-state-empty">
+                                        <p>You do not have any holdings yet. Place a paper trade to start building your portfolio.</p>
+                                        <Link className="trade-button async-state-action" to="/market">Explore Markets</Link>
+                                    </div>
                                 ) : (
                                     <>
                                         <div className="table-scroll">
-                                            <table>
+                                            <table className="data-table">
                                                 <thead>
                                                     <tr>
                                                         <th>Symbol</th>
@@ -255,11 +316,24 @@ function Portfolio() {
                         </div>
 
                         {areTradesLoading ? (
-                            <p className="panel-subtitle" role="status">Loading recent trades...</p>
+                            <div className="async-state async-state-loading" role="status">
+                                <p>Loading recent trades...</p>
+                            </div>
                         ) : tradesErrorMessage ? (
-                            <p className="login-error" role="alert">{tradesErrorMessage}</p>
+                            <div className="async-state async-state-error" role="alert">
+                                <p>{tradesErrorMessage}</p>
+                                <button
+                                    className="trade-button async-state-action"
+                                    type="button"
+                                    onClick={() => setTradesLoadAttempt((attempt) => attempt + 1)}
+                                >
+                                    Retry
+                                </button>
+                            </div>
                         ) : recentTrades.length === 0 ? (
-                            <p className="panel-subtitle">No trades yet.</p>
+                            <div className="async-state async-state-empty">
+                                <p>No trades yet. Your completed paper trades will appear here.</p>
+                            </div>
                         ) : (
                             <div className="table-scroll">
                                 <table className="data-table">

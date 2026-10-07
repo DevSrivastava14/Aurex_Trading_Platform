@@ -7,6 +7,11 @@ import StockDetails from "../components/StockDetails.jsx";
 import api from "../services/api.js";
 
 const supportedSymbols = new Set(["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"]);
+const isCanceledRequest = (error) => (
+    error?.code === "ERR_CANCELED"
+    || error?.name === "CanceledError"
+    || error?.name === "AbortError"
+);
 const formatPrice = (value) => Number.isFinite(value) ? `$${value.toFixed(2)}` : "—";
 const formatChange = (value) => Number.isFinite(value)
     ? `${value > 0 ? "+$" : "-$"}${Math.abs(value).toFixed(2)}`
@@ -43,6 +48,7 @@ function Market() {
     const [isWatchlistLoading, setIsWatchlistLoading] = useState(true);
     const [isWatchlistUpdating, setIsWatchlistUpdating] = useState(false);
     const [watchlistError, setWatchlistError] = useState("");
+    const [watchlistSuccess, setWatchlistSuccess] = useState("");
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
     const filteredStocks = stocks.filter((stock) =>
         stock.symbol.toLowerCase().includes(normalizedSearchTerm)
@@ -52,13 +58,14 @@ function Market() {
 
     useEffect(() => {
         let isCurrentRequest = true;
+        const controller = new AbortController();
 
         const fetchMarket = async () => {
             setIsMarketLoading(true);
             setMarketError("");
 
             try {
-                const response = await api.get("/api/market");
+                const response = await api.get("/api/market", { signal: controller.signal });
                 const marketStocks = response.data?.stocks;
 
                 if (!isValidMarketResponse(marketStocks)) {
@@ -74,7 +81,7 @@ function Market() {
                     ));
                 }
             } catch (error) {
-                if (isCurrentRequest) {
+                if (isCurrentRequest && !isCanceledRequest(error)) {
                     setStocks([]);
                     setMarketError(
                         error.response?.data?.message
@@ -90,31 +97,58 @@ function Market() {
             }
         };
 
-        fetchMarket();
+        Promise.resolve().then(() => {
+            if (isCurrentRequest) {
+                fetchMarket();
+            }
+        });
+
         return () => {
             isCurrentRequest = false;
+            controller.abort();
         };
     }, [marketLoadAttempt]);
 
     useEffect(() => {
+        let isCurrentRequest = true;
+        const controller = new AbortController();
+
         const fetchWatchlist = async () => {
+            setIsWatchlistLoading(true);
+            setWatchlistError("");
+
             try {
-                const response = await api.get("/api/watchlist");
+                const response = await api.get("/api/watchlist", { signal: controller.signal });
                 if (!Array.isArray(response.data?.symbols)) {
                     throw new Error("The watchlist response was not in the expected format.");
                 }
-                setWatchlistSymbols(response.data.symbols);
+                if (isCurrentRequest) {
+                    setWatchlistSymbols(response.data.symbols);
+                }
             } catch (error) {
-                setWatchlistError(
-                    error.response?.data?.message
-                        || "Unable to load watchlist status. You can still try adding this stock."
-                );
+                if (isCurrentRequest && !isCanceledRequest(error)) {
+                    setWatchlistError(
+                        error.response?.data?.message
+                            || "Unable to load watchlist status. You can still try adding this stock."
+                    );
+                }
             } finally {
-                setIsWatchlistLoading(false);
+                if (isCurrentRequest) {
+                    setIsWatchlistLoading(false);
+                }
             }
         };
 
-        fetchWatchlist();
+        Promise.resolve().then(() => {
+            if (isCurrentRequest) {
+                fetchWatchlist();
+            }
+        });
+
+        return () => {
+            isCurrentRequest = false;
+            controller.abort();
+        };
     }, []);
 
     const handleWatchlistToggle = async () => {
@@ -123,22 +157,27 @@ function Market() {
         }
 
         const isInWatchlist = watchlistSymbols.includes(selectedStock.symbol);
+        const symbol = selectedStock.symbol;
         setIsWatchlistUpdating(true);
         setWatchlistError("");
+        setWatchlistSuccess("");
 
         try {
             const response = isInWatchlist
-                ? await api.delete(`/api/watchlist/${encodeURIComponent(selectedStock.symbol)}`)
-                : await api.post("/api/watchlist", { symbol: selectedStock.symbol });
+                ? await api.delete(`/api/watchlist/${encodeURIComponent(symbol)}`)
+                : await api.post("/api/watchlist", { symbol });
 
             if (!Array.isArray(response.data?.symbols)) {
                 throw new Error("The watchlist response was not in the expected format.");
             }
             setWatchlistSymbols(response.data.symbols);
+            setWatchlistSuccess(
+                `${symbol} ${isInWatchlist ? "removed from" : "added to"} your watchlist.`
+            );
         } catch (error) {
             setWatchlistError(
                 error.response?.data?.message
-                    || `Unable to ${isInWatchlist ? "remove" : "add"} ${selectedStock.symbol} ${isInWatchlist ? "from" : "to"} your watchlist. Please try again.`
+                    || `Unable to ${isInWatchlist ? "remove" : "add"} ${symbol} ${isInWatchlist ? "from" : "to"} your watchlist. Please try again.`
             );
         } finally {
             setIsWatchlistUpdating(false);
@@ -160,20 +199,20 @@ function Market() {
                     </section>
 
                     {isMarketLoading ? (
-                        <section className="panel" role="status">
-                            <p className="panel-subtitle">Loading market data...</p>
-                        </section>
+                        <div className="async-state async-state-loading" role="status">
+                            <p>Loading market data...</p>
+                        </div>
                     ) : marketError ? (
-                        <section className="panel" aria-label="Market data error">
-                            <p className="login-error" role="alert">{marketError}</p>
+                        <div className="async-state async-state-error" role="alert">
+                            <p>{marketError}</p>
                             <button
-                                className="trade-button"
+                                className="trade-button async-state-action"
                                 type="button"
                                 onClick={() => setMarketLoadAttempt((attempt) => attempt + 1)}
                             >
                                 Retry
                             </button>
-                        </section>
+                        </div>
                     ) : selectedStock && (
                     <div className="market-layout">
                         <section className="panel market-stocks-panel">
@@ -218,7 +257,11 @@ function Market() {
                                             type="button"
                                             key={stock.symbol}
                                             aria-pressed={selectedSymbol === stock.symbol}
-                                            onClick={() => setSelectedSymbol(stock.symbol)}
+                                            onClick={() => {
+                                                setSelectedSymbol(stock.symbol);
+                                                setWatchlistError("");
+                                                setWatchlistSuccess("");
+                                            }}
                                         >
                                             <span className="stock-identity">
                                                 <strong>{stock.symbol}</strong>
@@ -244,10 +287,11 @@ function Market() {
                                 isWatchlistLoading={isWatchlistLoading}
                                 isWatchlistUpdating={isWatchlistUpdating}
                                 watchlistError={watchlistError}
+                                watchlistSuccess={watchlistSuccess}
                                 onWatchlistToggle={handleWatchlistToggle}
                             />
                             <PriceChart stock={selectedStock} />
-                            <OrderPanel selectedStock={selectedStock} />
+                            <OrderPanel selectedStock={selectedStock} showPriceSourceNote />
                         </div>
                     </div>
                     )}

@@ -36,28 +36,28 @@ Build a production-style paper trading platform with:
 Day 1 and Day 2 authentication are complete.
 Day 3 trading dashboard UI is complete.
 
-| Day 8 | Backend Integration + Validation | ✅ COMPLETE |
-| Day 9 | UI/UX Polish + Error Handling | ⬜ NEXT |
-| Day 10 | Testing + Deployment + Documentation | ⬜ PENDING |
+| Day 8 | Backend Integration + Validation | ✅ Completed |
+| Day 9 | UI/UX Polish + Error Handling + Provider Resilience | ✅ Completed |
+| Day 10 | Testing + Deployment + Documentation | ⬜ NEXT |
 
 ## Current Status
 
-**Day 8 / 10 — Backend Integration + Validation Complete**
+**Day 9 / 10 — UI/UX Polish + Error Handling + Provider Resilience Complete**
 
-**Next milestone:** Day 9 — UI/UX Polish + Error Handling
+**Next milestone:** Day 10 — Testing + Deployment + Documentation
 
 ## Current Project State
 
 - AUREX is a MERN paper-trading platform.
 - The market universe currently uses US stocks and USD ($).
-- The Market page and PriceChart use live quotes and historical prices through backend Twelve Data APIs.
+- Professional UI/UX polish across all pages with unified dark fintech aesthetics and typography.
+- Visible mock/demo terminology removed; honest product-grade market session and simulated execution indicators.
+- Standardized async states (loading with spinner, error with retry action, contextual empty states) across pages and widgets.
+- Order and watchlist operations display clear feedback alerts and disabled states.
+- Backend Twelve Data service features in-memory quote caching (60s), historical series caching (300s), in-flight request deduplication, and shared HTTP 429 rate-limit cooldown handling.
+- When the external Twelve Data rate limit is reached (HTTP 429), AUREX surfaces a graceful, retryable user message and serves cached quotes/charts without breaking or falling back to fake data.
 - Paper-trading execution, portfolio valuation, and watchlist pricing continue to use the backend execution catalog.
-- Day 5 trading functionality is complete and validated.
-- Day 6 portfolio, P&L, and trade history functionality is complete and validated.
-- Day 7 persistent watchlist functionality is complete and validated.
-- Day 8 backend market-data integration and trading-system compatibility validation are complete.
-- Static/mock dashboard widgets and the Dashboard's default OrderPanel stock remain unchanged.
-- Day 9 is the next development stage.
+- Day 9 is fully completed and validated. Day 10 is the final stage.
 
 ---
 
@@ -408,3 +408,34 @@ The execution catalog remains a paper-trading price source; it is not a live tra
 ## Day 8 Summary
 
 Day 8 added a backend-owned Twelve Data integration for live market quotes and historical charts, connected the Market page and PriceChart to those APIs, and validated provider failure handling and trading-system compatibility. Live market display now uses Twelve Data through the backend, while paper-trading execution, portfolio valuation, and watchlist pricing intentionally continue to use the backend execution catalog.
+
+---
+
+# Day 9 — UI/UX Polish + Error Handling + Provider Resilience
+
+**Status: ✅ Completed**
+
+## Frontend UI/UX Polish
+
+- **Removed Mock / Demo Terminology**: Replaced all visible `Mock session` badges with professional `US Session` indicators on Dashboard, Portfolio, and Trade History. Updated dashboard captions and footers to reflect honest simulated execution and virtual portfolio tracking. Connected sidebar profile to authenticated user state (`getStoredUser()`).
+- **Standardized Async States**: Unified loading, error, and empty states using `.async-state`, `.async-state-loading` (animated spinner), `.async-state-error` (inline retry button), and `.async-state-empty` across Market, Portfolio, Trade History, Watchlist, and PriceChart.
+- **Feedback & Interactions**: Standardized feedback banners with `.order-feedback-error` and `.order-feedback-success` across order execution and watchlist management. Added active state styling (`.stock-watchlist-button.in-watchlist`) and `★ In Watchlist` badge in Stock Details. Added proportional table action buttons (`.table-action-button`) in Watchlist.
+- **Visual & Responsive Consistency**: Preserved dark fintech styling with gold accents and green/red financial indicators while optimizing tabular alignment, typography, spacing, and mobile/desktop responsive layouts.
+
+## Backend Provider Resilience & Caching
+
+- **Quote Caching**: Added in-memory TTL caching (60 seconds) for real-time market quotes.
+- **Historical Data Caching**: Added in-memory TTL caching (300 seconds) scoped by symbol and range (1D, 1W, 1M).
+- **In-flight Request Deduplication**: Implemented promise coalescing for concurrent requests targeting the same symbol or historical series.
+- **Rate-Limit Resilience (HTTP 429 Cooldown)**: When Twelve Data returns HTTP 429 (rate limit exhausted), a shared provider cooldown activates to protect upstream quotas while still serving valid cached data. A user-friendly retry message is presented rather than raw provider exceptions. The existing chart implementation is preserved.
+
+## Validation
+
+- Backend tests: **27 passed, 0 failed**.
+- Frontend lint (`oxlint`): **0 errors, 0 warnings**.
+- Frontend production build (`vite build`): **Passed successfully**.
+- End-to-end user flows, protected routing, and responsive layouts verified.
+
+## Day 9 Summary
+
+Day 9 polished the entire frontend to look and feel like a mature, cohesive trading platform. Visible mock terminology was replaced with clear product-grade indicators, async states and feedback banners were standardized with retry actions, and backend market data resilience was upgraded with TTL caching, request deduplication, and graceful rate-limit cooldown handling.

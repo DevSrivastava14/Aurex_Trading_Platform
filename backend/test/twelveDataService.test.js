@@ -1,20 +1,29 @@
 const assert = require('node:assert/strict');
 const { afterEach, beforeEach, test } = require('node:test');
 const {
+  HISTORICAL_CACHE_TTL_MS,
   MarketDataError,
+  PROVIDER_COOLDOWN_MS,
+  QUOTE_CACHE_TTL_MS,
+  clearCache,
   fetchHistoricalData,
   fetchQuote,
+  getProviderCooldownState,
 } = require('../src/services/twelveDataService');
 
 const originalFetch = global.fetch;
 const originalApiKey = process.env.TWELVE_DATA_API_KEY;
+const originalDateNow = Date.now;
 
 beforeEach(() => {
+  clearCache();
   process.env.TWELVE_DATA_API_KEY = 'test-api-key';
 });
 
 afterEach(() => {
+  clearCache();
   global.fetch = originalFetch;
+  Date.now = originalDateNow;
   if (originalApiKey === undefined) {
     delete process.env.TWELVE_DATA_API_KEY;
   } else {
@@ -134,4 +143,166 @@ test('unsupported chart ranges are rejected before a provider request', async ()
     message: 'Range must be one of 1D, 1W, or 1M.',
     statusCode: 400,
   });
+});
+
+test('quote cache hits avoid a second provider request and return independent objects', async () => {
+  let requestCount = 0;
+  global.fetch = async () => {
+    requestCount += 1;
+    return Response.json({ symbol: 'AAPL', close: '230.25' });
+  };
+
+  const firstQuote = await fetchQuote('AAPL');
+  firstQuote.price = -1;
+  const secondQuote = await fetchQuote('AAPL');
+
+  assert.equal(requestCount, 1);
+  assert.equal(secondQuote.price, 230.25);
+  assert.equal(QUOTE_CACHE_TTL_MS, 60_000);
+});
+
+test('expired quote cache entries trigger a new provider request', async () => {
+  let requestCount = 0;
+  let currentTime = 1000;
+  Date.now = () => currentTime;
+  global.fetch = async () => {
+    requestCount += 1;
+    return Response.json({ symbol: 'MSFT', close: String(300 + requestCount) });
+  };
+
+  const firstQuote = await fetchQuote('MSFT');
+  currentTime += QUOTE_CACHE_TTL_MS;
+  const secondQuote = await fetchQuote('MSFT');
+
+  assert.equal(requestCount, 2);
+  assert.equal(firstQuote.price, 301);
+  assert.equal(secondQuote.price, 302);
+});
+
+test('historical cache keys distinguish symbol and range', async () => {
+  let requestCount = 0;
+  global.fetch = async (url) => {
+    requestCount += 1;
+    const requestedUrl = new URL(url);
+    const offset = requestedUrl.searchParams.get('symbol') === 'AAPL' ? 0 : 10;
+    const close = String(200 + offset + requestCount);
+    return Response.json({
+      values: [{ datetime: '2026-10-07 10:00:00', close }],
+    });
+  };
+
+  const aaplDaily = await fetchHistoricalData('AAPL', '1D');
+  const aaplWeekly = await fetchHistoricalData('AAPL', '1W');
+  const msftDaily = await fetchHistoricalData('MSFT', '1D');
+  const cachedAaplDaily = await fetchHistoricalData('AAPL', '1D');
+
+  assert.equal(requestCount, 3);
+  assert.equal(aaplDaily[0].price, 201);
+  assert.equal(aaplWeekly[0].price, 202);
+  assert.equal(msftDaily[0].price, 213);
+  assert.deepEqual(cachedAaplDaily, aaplDaily);
+  assert.equal(HISTORICAL_CACHE_TTL_MS, 300_000);
+});
+
+test('HTTP 429 activates a shared cooldown that blocks quote and history provider requests', async () => {
+  let requestCount = 0;
+  let currentTime = 1000;
+  Date.now = () => currentTime;
+  global.fetch = async () => {
+    requestCount += 1;
+    return new Response('Too many requests', { status: 429 });
+  };
+
+  await assert.rejects(fetchQuote('NVDA'), {
+    message: 'Twelve Data rate limit reached. Please try again later.',
+    statusCode: 429,
+  });
+
+  assert.equal(getProviderCooldownState().active, true);
+  assert.equal(getProviderCooldownState().triggeredAt, currentTime);
+  assert.equal(getProviderCooldownState().expiresAt, currentTime + PROVIDER_COOLDOWN_MS);
+
+  await assert.rejects(fetchQuote('AAPL'), { statusCode: 429 });
+  await assert.rejects(fetchHistoricalData('AAPL', '1D'), { statusCode: 429 });
+  assert.equal(requestCount, 1);
+});
+
+test('successful cached data remains available during provider cooldown', async () => {
+  let requestCount = 0;
+  global.fetch = async (url) => {
+    requestCount += 1;
+    if (new URL(url).searchParams.get('symbol') === 'MSFT') {
+      return new Response(null, { status: 429 });
+    }
+
+    return Response.json({ symbol: 'AAPL', close: '230.25' });
+  };
+
+  const cachedQuote = await fetchQuote('AAPL');
+  await assert.rejects(fetchQuote('MSFT'), { statusCode: 429 });
+  const quoteDuringCooldown = await fetchQuote('AAPL');
+
+  assert.equal(requestCount, 2);
+  assert.deepEqual(quoteDuringCooldown, cachedQuote);
+});
+
+test('provider cooldown expires and allows a new provider request', async () => {
+  let requestCount = 0;
+  let currentTime = 1000;
+  Date.now = () => currentTime;
+  global.fetch = async () => {
+    requestCount += 1;
+    if (requestCount === 1) {
+      return new Response(null, { status: 429 });
+    }
+    return Response.json({ symbol: 'NVDA', close: '140.50' });
+  };
+
+  await assert.rejects(fetchQuote('NVDA'), { statusCode: 429 });
+  await assert.rejects(fetchHistoricalData('NVDA', '1D'), { statusCode: 429 });
+  currentTime += PROVIDER_COOLDOWN_MS;
+  const quote = await fetchQuote('NVDA');
+
+  assert.equal(requestCount, 2);
+  assert.equal(quote.price, 140.5);
+  assert.equal(getProviderCooldownState().active, false);
+});
+
+test('ordinary provider failures are not cached and do not activate cooldown', async () => {
+  let requestCount = 0;
+  global.fetch = async () => {
+    requestCount += 1;
+    if (requestCount === 1) {
+      return new Response(
+        JSON.stringify({ code: 500, message: 'Temporary provider failure' }),
+        { status: 500, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    return Response.json({ symbol: 'NVDA', close: '140.50' });
+  };
+
+  await assert.rejects(fetchQuote('NVDA'), { statusCode: 502 });
+  assert.equal(getProviderCooldownState().active, false);
+  const quote = await fetchQuote('NVDA');
+
+  assert.equal(requestCount, 2);
+  assert.equal(quote.price, 140.5);
+});
+
+test('concurrent requests for the same uncached quote share one provider call', async () => {
+  let requestCount = 0;
+  global.fetch = async () => {
+    requestCount += 1;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    return Response.json({ symbol: 'GOOGL', close: '180.75' });
+  };
+
+  const [firstQuote, secondQuote] = await Promise.all([
+    fetchQuote('GOOGL'),
+    fetchQuote('GOOGL'),
+  ]);
+
+  assert.equal(requestCount, 1);
+  assert.deepEqual(firstQuote, secondQuote);
 });

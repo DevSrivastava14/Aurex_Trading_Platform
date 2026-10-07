@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { stocks } from "../data/marketData.js";
 import api from "../services/api.js";
 
@@ -7,12 +7,13 @@ const formatCurrency = (value) => `$${Number(value).toLocaleString("en-US", {
     maximumFractionDigits: 2,
 })}`;
 
-function OrderPanel({ selectedStock = stocks[0] }) {
+function OrderPanel({ selectedStock = stocks[0], showPriceSourceNote = false }) {
     const [side, setSide] = useState("buy");
     const [quantity, setQuantity] = useState("1");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const submissionInFlight = useRef(false);
     const estimatedAmount = (Number(quantity) || 0) * selectedStock.price;
 
     const adjustQuantity = (amount) => {
@@ -26,6 +27,10 @@ function OrderPanel({ selectedStock = stocks[0] }) {
     };
 
     const handleSubmit = async () => {
+        if (submissionInFlight.current) {
+            return;
+        }
+
         setErrorMessage("");
         setSuccessMessage("");
 
@@ -35,6 +40,7 @@ function OrderPanel({ selectedStock = stocks[0] }) {
             return;
         }
 
+        submissionInFlight.current = true;
         setIsSubmitting(true);
 
         try {
@@ -51,7 +57,7 @@ function OrderPanel({ selectedStock = stocks[0] }) {
             }
 
             setSuccessMessage(
-                `${trade.side} ${trade.quantity} ${trade.symbol} at ${formatCurrency(trade.price)} per share. Total: ${formatCurrency(trade.totalValue)}.`
+                `Order placed successfully. ${trade.side} ${trade.quantity} ${trade.symbol} at ${formatCurrency(trade.price)} per share. Total: ${formatCurrency(trade.totalValue)}.`
             );
             setQuantity("1");
         } catch (error) {
@@ -61,6 +67,7 @@ function OrderPanel({ selectedStock = stocks[0] }) {
                     || "Unable to place the order. Check your connection and try again."
             );
         } finally {
+            submissionInFlight.current = false;
             setIsSubmitting(false);
         }
     };
@@ -85,19 +92,24 @@ function OrderPanel({ selectedStock = stocks[0] }) {
                     <span className="order-price">{formatCurrency(selectedStock.price)}</span>
                 </div>
             </div>
+            {showPriceSourceNote && (
+                <p className="price-source-note">
+                    Quote shown is live market data; paper orders execute at AUREX&apos;s simulated price.
+                </p>
+            )}
             <div className="order-side" aria-label="Order side">
-                <button className={`side-option${side === "buy" ? " selected" : ""}`} type="button" aria-pressed={side === "buy"} onClick={() => { setSide("buy"); setErrorMessage(""); setSuccessMessage(""); }}>Buy</button>
-                <button className={`side-option${side === "sell" ? " selected" : ""}`} type="button" aria-pressed={side === "sell"} onClick={() => { setSide("sell"); setErrorMessage(""); setSuccessMessage(""); }}>Sell</button>
+                <button className={`side-option${side === "buy" ? " selected" : ""}`} type="button" aria-pressed={side === "buy"} disabled={isSubmitting} onClick={() => { setSide("buy"); setErrorMessage(""); setSuccessMessage(""); }}>Buy</button>
+                <button className={`side-option${side === "sell" ? " selected" : ""}`} type="button" aria-pressed={side === "sell"} disabled={isSubmitting} onClick={() => { setSide("sell"); setErrorMessage(""); setSuccessMessage(""); }}>Sell</button>
             </div>
             <div className="order-fields">
                 <div className="order-field">
                     <label className="field-label" htmlFor="order-quantity">Quantity</label>
                     <div className="quantity-field">
-                        <input id="order-quantity" type="number" min="1" step="1" value={quantity} onChange={(event) => { setQuantity(event.target.value); setErrorMessage(""); setSuccessMessage(""); }} />
+                        <input id="order-quantity" type="number" min="1" step="1" value={quantity} disabled={isSubmitting} onChange={(event) => { setQuantity(event.target.value); setErrorMessage(""); setSuccessMessage(""); }} />
                         <span>Shares</span>
                         <div className="quantity-controls" aria-label="Adjust quantity">
-                            <button type="button" aria-label="Increase quantity" onClick={() => { adjustQuantity(1); setErrorMessage(""); setSuccessMessage(""); }}>+</button>
-                            <button type="button" aria-label="Decrease quantity" onClick={() => { adjustQuantity(-1); setErrorMessage(""); setSuccessMessage(""); }}>-</button>
+                            <button type="button" aria-label="Increase quantity" disabled={isSubmitting} onClick={() => { adjustQuantity(1); setErrorMessage(""); setSuccessMessage(""); }}>+</button>
+                            <button type="button" aria-label="Decrease quantity" disabled={isSubmitting} onClick={() => { adjustQuantity(-1); setErrorMessage(""); setSuccessMessage(""); }}>-</button>
                         </div>
                     </div>
                 </div>
@@ -118,9 +130,9 @@ function OrderPanel({ selectedStock = stocks[0] }) {
             <div className="order-summary">
                 <span>Estimated amount</span><strong>{formatCurrency(estimatedAmount)}</strong>
             </div>
-            {errorMessage && <p className="order-disclaimer" role="alert">{errorMessage}</p>}
-            {successMessage && <p className="order-disclaimer" role="status">{successMessage}</p>}
-            <button className="trade-button" type="button" onClick={handleSubmit} disabled={isSubmitting}>
+            {errorMessage && <p className="order-feedback order-feedback-error" role="alert">{errorMessage}</p>}
+            {successMessage && <p className="order-feedback order-feedback-success" role="status">{successMessage}</p>}
+            <button className="trade-button" type="button" onClick={handleSubmit} disabled={isSubmitting} aria-busy={isSubmitting}>
                 {isSubmitting ? "Submitting order..." : `Place ${side.toUpperCase()} order`}
             </button>
         </section>

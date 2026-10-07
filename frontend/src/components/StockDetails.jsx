@@ -4,6 +4,7 @@ function StockDetails({
     isWatchlistLoading,
     isWatchlistUpdating,
     watchlistError,
+    watchlistSuccess,
     onWatchlistToggle,
 }) {
     const positive = Number.isFinite(stock.change) && stock.change >= 0;
@@ -61,23 +62,34 @@ function StockDetails({
                 ))}
             </div>
 
-            <div>
-                {isInWatchlist && <p className="panel-subtitle" role="status">In Watchlist</p>}
-                <button
-                    className="trade-button"
-                    type="button"
-                    onClick={onWatchlistToggle}
-                    disabled={isWatchlistLoading || isWatchlistUpdating}
-                >
-                    {isWatchlistLoading
-                        ? "Checking Watchlist..."
-                        : isWatchlistUpdating
-                            ? (isInWatchlist ? "Removing..." : "Adding...")
-                            : isInWatchlist
-                                ? "Remove from Watchlist"
-                                : "Add to Watchlist"}
-                </button>
-                {watchlistError && <p className="login-error" role="alert">{watchlistError}</p>}
+            <div className="stock-details-actions">
+                <div className="stock-actions-row">
+                    <button
+                        className={`trade-button stock-watchlist-button${isInWatchlist ? " in-watchlist" : ""}`}
+                        type="button"
+                        onClick={onWatchlistToggle}
+                        disabled={isWatchlistLoading || isWatchlistUpdating}
+                    >
+                        {isWatchlistLoading
+                            ? "Checking Watchlist..."
+                            : isWatchlistUpdating
+                                ? (isInWatchlist ? "Removing..." : "Adding...")
+                                : isInWatchlist
+                                    ? "✓ Remove from Watchlist"
+                                    : "+ Add to Watchlist"}
+                    </button>
+                    {isInWatchlist && (
+                        <span className="watchlist-status-badge" role="status">
+                            ★ In Watchlist
+                        </span>
+                    )}
+                </div>
+                {watchlistError && <p className="order-feedback order-feedback-error" role="alert">{watchlistError}</p>}
+                {watchlistSuccess && (
+                    <p className="order-feedback order-feedback-success" role="status">
+                        {watchlistSuccess}
+                    </p>
+                )}
             </div>
         </section>
     );

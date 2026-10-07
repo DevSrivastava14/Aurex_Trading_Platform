@@ -8,7 +8,7 @@ function MarketWatch() {
                     <h2>Market Watch</h2>
                     <p className="panel-subtitle">A snapshot of the market</p>
                 </div>
-                <span className="table-caption">US MARKETS · MOCK DATA</span>
+                <span className="table-caption">US MARKETS · OVERVIEW</span>
             </div>
             <div className="market-table-wrap">
                 <table className="data-table market-table">
@@ -25,7 +25,7 @@ function MarketWatch() {
                     </tbody>
                 </table>
             </div>
-            <div className="market-footer"><span className="status-dot" /> Prices shown are illustrative mock data</div>
+            <div className="market-footer"><span className="status-dot" /> US equity market overview</div>
         </section>
     );
 }

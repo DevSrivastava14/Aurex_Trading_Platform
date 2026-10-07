@@ -91,9 +91,11 @@
     background: #3a3426;
 }
 
-.login-submit:disabled {
-    cursor: wait;
-    opacity: 0.7;
+button:disabled,
+input:disabled,
+select:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
 .login-register-prompt {
@@ -182,8 +184,8 @@
     text-decoration: none;
 }
 
-.nav-item:hover,
-.nav-item.active {
+.nav-item.active,
+.nav-item:hover:not([aria-disabled="true"]) {
     border-color: #37342d;
     color: #e5e1d8;
     background: #222321;
@@ -196,9 +198,14 @@
 .nav-icon {
     display: grid;
     width: 19px;
+    flex: 0 0 19px;
     place-items: center;
     color: #7f878c;
     font-size: 16px;
+}
+
+.nav-item[aria-disabled="true"] {
+    color: #697177;
 }
 
 .sidebar-bottom {
@@ -388,7 +395,7 @@
     font-size: 10px;
 }
 
-.logout-button:hover {
+.logout-button:hover:not(:disabled) {
     border-color: #655941;
     color: var(--text);
 }
@@ -577,6 +584,14 @@
     font-weight: 500;
 }
 
+.data-table tbody tr {
+    transition: background-color 120ms ease;
+}
+
+.data-table tbody tr:hover {
+    background: #202220;
+}
+
 .data-table td {
     height: 40px;
     padding: 7px;
@@ -714,6 +729,66 @@
     text-align: center;
 }
 
+.async-state {
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #17191b;
+}
+
+.async-state p {
+    margin: 0;
+    color: #92999f;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.async-state-loading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.async-state-loading::before {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border: 2px solid #454a4d;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    content: "";
+    animation: async-state-spin 0.8s linear infinite;
+}
+
+@keyframes async-state-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.async-state-error {
+    border-color: rgb(223 123 123 / 35%);
+    background: rgb(223 123 123 / 5%);
+}
+
+.async-state-error p {
+    color: var(--red);
+}
+
+.async-state-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.async-state-action:hover:not(:disabled) {
+    cursor: pointer;
+    text-decoration: none;
+}
+
 .stock-list-heading,
 .stock-list-row {
     display: grid;
@@ -808,7 +883,7 @@
     font-size: 9px;
 }
 
-.chart-range-button:hover {
+.chart-range-button:hover:not(:disabled) {
     color: #d1d5d6;
 }
 
@@ -916,6 +991,49 @@
     text-overflow: ellipsis;
 }
 
+.stock-details-actions {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+.stock-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.stock-watchlist-button {
+    flex: 1;
+    min-width: 0;
+}
+
+.stock-watchlist-button.in-watchlist {
+    border-color: #554832;
+    color: #e5ded0;
+    background: #23201a;
+}
+
+.stock-watchlist-button.in-watchlist:hover:not(:disabled) {
+    border-color: #88754e;
+    background: #2f2a20;
+}
+
+.watchlist-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid #4a3e26;
+    border-radius: 3px;
+    color: var(--accent);
+    background: #23201a;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
 .holdings-panel {
     padding-bottom: 9px;
 }
@@ -972,6 +1090,13 @@
     padding-bottom: 9px;
     color: #92999f;
     font-size: 9px;
+}
+
+.price-source-note {
+    margin: 8px 0 0;
+    color: #7e878c;
+    font-size: 9px;
+    line-height: 1.5;
 }
 
 .order-side {
@@ -1065,7 +1190,7 @@
     border-top: 1px solid #353a3d;
 }
 
-.quantity-controls button:hover {
+.quantity-controls button:hover:not(:disabled) {
     color: var(--accent);
     background: #252720;
 }
@@ -1095,15 +1220,36 @@
     font-weight: 600;
 }
 
-.trade-button:hover {
+.trade-button:hover:not(:disabled) {
     background: #3a3426;
 }
 
-.order-disclaimer {
-    display: inline-block;
-    margin: 0 0 0 12px;
-    color: #737b80;
-    font-size: 8px;
+.table-action-button {
+    min-width: 76px;
+    height: 27px;
+    padding: 0 10px;
+    font-size: 9px;
+}
+
+.order-feedback {
+    margin: 0 0 12px;
+    padding: 9px 11px;
+    border: 1px solid;
+    border-radius: 4px;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.order-feedback-error {
+    border-color: rgb(223 123 123 / 35%);
+    color: var(--red);
+    background: rgb(223 123 123 / 8%);
+}
+
+.order-feedback-success {
+    border-color: rgb(93 194 154 / 35%);
+    color: var(--green);
+    background: rgb(93 194 154 / 8%);
 }
 
 .holding-company {
@@ -1234,7 +1380,8 @@
     }
 
     .nav-icon {
-        width: auto;
+        width: 15px;
+        flex-basis: 15px;
         font-size: 13px;
     }
 
@@ -1309,7 +1456,7 @@
         padding-left: 4px;
     }
 
-    .market-table th,
+    .data-table th,
     .data-table td {
         font-size: 9px;
     }

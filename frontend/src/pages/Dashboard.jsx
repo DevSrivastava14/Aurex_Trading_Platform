@@ -18,7 +18,7 @@ function Dashboard() {
                             <h1>Dashboard</h1>
                             <p className="welcome-subtitle">Your portfolio and the market, at a glance.</p>
                         </div>
-                        <div className="market-pill"><span className="status-dot" /> Market open <span className="market-time">· Mock session</span></div>
+                        <div className="market-pill"><span className="status-dot" /> Market open <span className="market-time">· US Session</span></div>
                     </section>
 
                     <PortfolioOverview />
@@ -32,7 +32,7 @@ function Dashboard() {
 
                     <footer className="dashboard-footer">
                         <span>AUREX · PAPER TRADING</span>
-                        <span>Market values are illustrative mock data</span>
+                        <span>Paper Trading Execution · Virtual Portfolio</span>
                     </footer>
                 </div>
             </main>
