@@ -15,7 +15,16 @@ const app = express();
 
 connectDB();
 
-app.use(cors());
+const corsOptions = process.env.CORS_ORIGIN
+    ? {
+        origin: process.env.CORS_ORIGIN.includes(",")
+            ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+            : process.env.CORS_ORIGIN.trim(),
+        credentials: true,
+    }
+    : {};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/market", marketRoutes);
